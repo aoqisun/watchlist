@@ -25,10 +25,11 @@ def user_page(name):
 
 @app.route('/')
 def index():
-    return render_template('index.html', name=name, movies=movies, a=a)
+    return render_template('index.html', name=name, movies=movies)
     # return '<h1>Hello Totoro!</h1><img src="http://helloflask.com/totoro.gif">'
     # return 'Hello'
     # return '<h1>Hello Totoro!</h1><img src="https://img.soogif.com/NQy8FNhHUebORPnFRkJogMVARjCvkpRv.gif">'
+
 
 
 @app.route('/test')
