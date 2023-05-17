@@ -67,15 +67,25 @@ def forge():
 def user_page(name):
     return "你是输入的User时{}：".format(name)
 
+# 模板上下文处理函数
+@app.context_processor
+def inject_user():
+    user = User.query.first()
+    return dict(user=user)
 
 @app.route('/')
 def index():
-    user = User.query.filter()  # 读取用户记录
     movies = Movie.query.all()  # 读取所有电影记录
-    return render_template('index.html', user=user, movies=movies)
+    return render_template('index.html', movies=movies)
     # return '<h1>Hello Totoro!</h1><img src="http://helloflask.com/totoro.gif">'
     # return 'Hello'
     # return '<h1>Hello Totoro!</h1><img src="https://img.soogif.com/NQy8FNhHUebORPnFRkJogMVARjCvkpRv.gif">'
+
+
+@app.errorhandler(404)   #传入要处理的错误代码
+def page_not_found(e):   # 接受异常对象作为参数
+    return render_template('404.html'),404  # 返回模板和状态码
+
 
 
 @app.route('/test')
