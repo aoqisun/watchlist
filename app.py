@@ -1,7 +1,7 @@
 import os
 import sys
 import click
-from flask import Flask, url_for, render_template
+from flask import Flask, url_for, render_template, request, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 
 WIN = sys.platform.startswith('win')
@@ -16,7 +16,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'da
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 关闭对模型修改的监控
 # 初始化扩展，传入程序实例 app
 db = SQLAlchemy(app)
-
+app.config['SECRET_KEY'] = 'dev'
 
 @app.cli.command() # 注册为命令
 @click.option('--drop', is_flag=True, help='Create after drop.')
@@ -73,13 +73,60 @@ def inject_user():
     user = User.query.first()
     return dict(user=user)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':  # 判断是否是post请求
+        # 获取表单数据
+        title = request.form.get('title')   # 传入表单对应输入字段的name的值
+        year = request.form.get('year')
+        #验证数据
+        if not title or not year or len(year) > 4 or len(title) > 60:
+            flash('Invalid input.')  #显示错误提示
+
+            return redirect(url_for('index'))   # 重定向回主页
+        # 保存表单数据到数据库
+        print("保存表单到数据库")
+        movie = Movie(title=title,year=year) # 创建记录
+        db.session.add(movie)  # 添加到数据库会话
+        db.session.commit()  # 提交数据库会话
+        return redirect(url_for('index'))
+    user = User.query.first()
     movies = Movie.query.all()  # 读取所有电影记录
-    return render_template('index.html', movies=movies)
+    print("显示所有电影")
+    return render_template('index.html', user=user, movies=movies)
     # return '<h1>Hello Totoro!</h1><img src="http://helloflask.com/totoro.gif">'
     # return 'Hello'
     # return '<h1>Hello Totoro!</h1><img src="https://img.soogif.com/NQy8FNhHUebORPnFRkJogMVARjCvkpRv.gif">'
+
+
+@app.route('/movie/edit/<int:movie_id>', methods=['GET', 'POST'])
+def edit(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+    if request.method == 'POST': #处理编辑表单的提交请求
+        title = request.form['title']
+        year = request.form['year']
+        if not title or not year or len(year) > 4 or len(title) > 60:
+            flash('Invalid input.')
+            return redirect(url_for('edit', movie_id=movie_id))  # 重定向回对应的编辑页面
+        movie.title = title
+        movie.year = year
+        db.session.commit()
+        flash("Item updated.")
+        return redirect(url_for('index'))
+    # 传入被编辑的电影记录
+    return render_template('edit.html', movie=movie)
+
+
+
+# 删除电影条目
+@app.route('/movies/delete/<int:movie_id>', methods=['POST'])
+# 限定只接受POST请求
+def delete(movie_id):
+    movie = Movie.query.get(movie_id) # 获取电影记录
+    db.session.delete(movie) # delete对应的记录
+    db.session.commit()  # 提交数据库会话
+    flash('Item deleted')
+    return redirect(url_for('index'))
 
 
 @app.errorhandler(404)   #传入要处理的错误代码
